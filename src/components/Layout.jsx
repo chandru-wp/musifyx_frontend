@@ -17,9 +17,25 @@ export default function Layout({ children }) {
     const goBack = () => navigate(-1);
     const goForward = () => navigate(1);
 
-    // ... friends list ...
+    const friends = [
+        { name: "Sarah M.", track: "Blinding Lights", artist: "The Weeknd", lastSeen: "2 min ago" },
+        { name: "Jessica W.", track: "Levitating", artist: "Dua Lipa", lastSeen: "15 min ago" },
+        { name: "David K.", track: "Stay", artist: "Kid LAROI", lastSeen: "1h ago" }
+    ];
 
-    // ... formatTime and handleSeek ...
+    const formatTime = (seconds) => {
+        if (!seconds) return "0:00";
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
+
+    const handleSeek = (e) => {
+        const width = e.target.clientWidth;
+        const clickX = e.nativeEvent.offsetX;
+        const seekTime = (clickX / width) * duration;
+        seek(seekTime);
+    };
 
     return (
         <div className="flex flex-col h-screen bg-black text-white overflow-hidden font-sans">
