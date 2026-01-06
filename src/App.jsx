@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import UserHome from "./pages/UserHome";
@@ -10,6 +10,7 @@ import Search from "./pages/Search";
 import { AuthProvider, AuthContext } from "./context/AuthContext";
 import { useContext } from "react";
 import Layout from "./components/Layout";
+import { PlayerProvider } from "./context/PlayerContext";
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { role } = useContext(AuthContext);
@@ -69,15 +70,13 @@ function RoutesWrapper() {
   );
 }
 
-import { PlayerProvider } from "./context/PlayerContext";
-
 export default function App() {
   return (
     <AuthProvider>
       <PlayerProvider>
-        <BrowserRouter>
+        <HashRouter>
           <RoutesWrapper />
-        </BrowserRouter>
+        </HashRouter>
       </PlayerProvider>
     </AuthProvider>
   );
