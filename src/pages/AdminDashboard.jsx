@@ -399,7 +399,10 @@ export default function AdminDashboard() {
                         <p className="font-bold text-sm truncate">{s.title}</p>
                         <p className="text-[10px] text-spotify-light font-bold uppercase">{s.artist}</p>
                       </div>
-                      <button onClick={() => deleteSong(s.id)} className="text-red-500/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-2 bg-red-500/10 rounded-lg">🗑</button>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                        <button onClick={() => handleEditSong(s)} className="text-blue-500/50 hover:text-blue-500 p-2 bg-blue-500/10 rounded-lg" title="Edit">✏️</button>
+                        <button onClick={() => deleteSong(s.id)} className="text-red-500/50 hover:text-red-500 p-2 bg-red-500/10 rounded-lg" title="Delete">🗑</button>
+                      </div>
                     </div>
                   ))
                 ) : (
