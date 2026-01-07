@@ -10,8 +10,12 @@ export default function UserHome() {
   const { playSong, currentSong, isPlaying } = useContext(PlayerContext);
 
   useEffect(() => {
+    console.log("API URL:", import.meta.env.VITE_API_URL);
     api.get("/songs")
-      .then(res => setSongs(res.data))
+      .then(res => {
+        console.log("Songs fetched:", res.data);
+        setSongs(res.data);
+      })
       .catch(err => console.error("Failed to fetch songs", err))
       .finally(() => setLoading(false));
   }, []);

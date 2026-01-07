@@ -70,52 +70,32 @@ export default function AdminDashboard() {
     }
   };
 
-  const addOrUpdateSong = async (e) => {
+  const addSong = async (e) => {
     e.preventDefault();
     if (!song.title || !song.artist) return alert("Title and Artist are required");
 
-    const finalAudioUrl = song.audioUrl;
+    // Auto-convert Google Drive links
+    let finalAudioUrl = song.audioUrl;
+    if (finalAudioUrl.includes("drive.google.com") && finalAudioUrl.includes("/view")) {
+      const fileIdMatch = finalAudioUrl.match(/\/d\/(.+?)\//);
+      if (fileIdMatch && fileIdMatch[1]) {
+        finalAudioUrl = `https://drive.google.com/uc?export=download&id=${fileIdMatch[1]}`;
+        console.log("Converted Drive Link:", finalAudioUrl);
+      }
+    }
 
     setLoading(true);
     try {
-      if (editingSong) {
-        // Update existing song
-        await api.put(`/songs/${editingSong.id}`, { ...song, audioUrl: finalAudioUrl });
-        alert("Song Updated Successfully! ✏️");
-        setEditingSong(null);
-      } else {
-        // Create new song
-        await api.post("/songs", { ...song, audioUrl: finalAudioUrl });
-        alert("Song Published Successfully! 🚀");
-      }
+      await api.post("/songs", { ...song, audioUrl: finalAudioUrl });
+      alert("Song Published Successfully! 🚀");
       setSong({ title: "", artist: "", image: "", audioUrl: "", albumId: "" });
       setPreview(null);
       fetchSongs();
     } catch (err) {
-      alert("Failed to save song. Error: " + (err.response?.data?.msg || err.message));
+      alert("Failed to add song. Error: " + (err.response?.data?.msg || err.message));
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEditSong = (songToEdit) => {
-    setEditingSong(songToEdit);
-    setSong({
-      title: songToEdit.title,
-      artist: songToEdit.artist,
-      image: songToEdit.image || "",
-      audioUrl: songToEdit.audioUrl || "",
-      albumId: songToEdit.albumId || ""
-    });
-    setPreview(songToEdit.image);
-    setMusicMode('song');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingSong(null);
-    setSong({ title: "", artist: "", image: "", audioUrl: "", albumId: "" });
-    setPreview(null);
   };
 
   const addAlbum = async (e) => {
@@ -251,7 +231,7 @@ export default function AdminDashboard() {
               </div>
 
               {musicMode === 'song' ? (
-                <form onSubmit={addOrUpdateSong} className="flex flex-col gap-8">
+                <form onSubmit={addSong} className="flex flex-col gap-8">
                   <div className="group">
                     <label className="text-[10px] font-black text-spotify-light mb-2 block uppercase tracking-widest">Cover Image</label>
                     <div className="relative aspect-square w-full bg-spotify-gray rounded-2xl overflow-hidden border-2 border-dashed border-white/10 hover:border-spotify-green/50 transition-all cursor-pointer">
@@ -308,17 +288,8 @@ export default function AdminDashboard() {
                     disabled={loading}
                     className="spotify-button w-full !rounded-xl !py-4 shadow-xl flex items-center justify-center gap-2"
                   >
-                    {loading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : <>{editingSong ? '✏️ Update Track' : '🚀 Publish Track'}</>}
+                    {loading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : <>🚀 Publish Track</>}
                   </button>
-                  {editingSong && (
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      className="w-full py-3 border border-white/20 rounded-xl text-spotify-light hover:text-white hover:bg-white/5 transition-all font-bold"
-                    >
-                      Cancel Edit
-                    </button>
-                  )}
                 </form>
               ) : (
                 <form onSubmit={addAlbum} className="flex flex-col gap-8">
