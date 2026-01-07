@@ -51,6 +51,7 @@ export default function UserManagement() {
             setEditingUser(null);
             fetchUsers();
         } catch (err) {
+            console.error(err);
             showToast("Failed to update user details");
         } finally {
             setLoading(false);
@@ -64,6 +65,7 @@ export default function UserManagement() {
             showToast("User removed from directory", "success");
             fetchUsers();
         } catch (err) {
+            console.error(err);
             showToast("Failed to delete user profile");
         }
     };

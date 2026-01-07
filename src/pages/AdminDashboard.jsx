@@ -109,6 +109,7 @@ export default function AdminDashboard() {
       await api.delete(`/songs/${id}`);
       fetchSongs();
     } catch (err) {
+      console.error(err);
       alert("Failed to delete track");
     }
   };
@@ -138,6 +139,7 @@ export default function AdminDashboard() {
       setEditingUser(null);
       fetchUsers();
     } catch (err) {
+      console.error(err);
       alert("Failed to update user");
     } finally {
       setLoading(false);
@@ -150,6 +152,7 @@ export default function AdminDashboard() {
       await api.delete(`/auth/users/${id}`);
       fetchUsers();
     } catch (err) {
+      console.error(err);
       alert("Failed to delete user");
     }
   };
