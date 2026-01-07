@@ -99,9 +99,9 @@ export default function Layout({ children }) {
                                     </Link>
                                 </>
                             )}
-                            <button onClick={logout} className="w-full text-left text-[10px] text-spotify-light hover:text-red-500 font-black uppercase tracking-widest transition-colors py-2">
+                            {/* <button onClick={logout} className="w-full text-left text-[10px] text-spotify-light hover:text-red-500 font-black uppercase tracking-widest transition-colors py-2">
                                 Sign Out
-                            </button>
+                            </button> */}
                         </div>
                     </div>
                 </div>
