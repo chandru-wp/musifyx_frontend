@@ -20,7 +20,7 @@ export default function Login() {
     try {
       const res = await api.post("/auth/login", data);
       showToast("Access Granted! Syncing your library...", "success");
-      setTimeout(() => login(res.data.token, res.data.role), 1000);
+      login(res.data.token, res.data.user.role, res.data.user.id, res.data.user.username);
     } catch (err) {
       const msg = err.response?.data?.msg || err.response?.data?.error || "Login failed";
       showToast(msg, "error");
@@ -32,10 +32,6 @@ export default function Login() {
   return (
     <div className="h-screen flex items-center justify-center bg-gradient-to-b from-[#1db95433] to-black p-4 font-sans">
       <div className="bg-black p-10 md:p-12 rounded-2xl w-full max-w-md shadow-2xl border border-spotify-gray relative overflow-hidden">
-        {/* Simulation Badge */}
-        <div className="absolute top-0 right-0 bg-spotify-green px-4 py-1 text-[8px] font-black text-black uppercase tracking-widest rounded-bl-xl shadow-lg animate-pulse">
-          Simulation Mode Active
-        </div>
 
         <div className="flex justify-center mb-10">
           <div className="text-spotify-green text-3xl font-black tracking-tighter flex items-center gap-2">
@@ -45,14 +41,16 @@ export default function Login() {
 
         <h1 className="text-3xl font-black mb-10 text-center tracking-tight leading-tight">Log in to MusifyX</h1>
 
-        <div className="space-y-6">
+        <form
+          className="space-y-6"
+          onSubmit={(e) => { e.preventDefault(); submit(); }}
+        >
           <div>
             <label className="text-[10px] font-black mb-2 block uppercase tracking-[0.2em] text-spotify-light">Email or username</label>
             <input
               placeholder="Email or username"
               className="spotify-input !mb-0"
               onChange={e => setData({ ...data, username: e.target.value })}
-              onKeyDown={(e) => e.key === 'Enter' && submit()}
             />
           </div>
 
@@ -63,18 +61,17 @@ export default function Login() {
               placeholder="Password"
               className="spotify-input !mb-0"
               onChange={e => setData({ ...data, password: e.target.value })}
-              onKeyDown={(e) => e.key === 'Enter' && submit()}
             />
           </div>
 
           <button
-            onClick={submit}
+            type="submit"
             disabled={loading}
             className={`spotify-button w-full mt-4 bg-spotify-green text-black py-4 rounded-full font-black hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-spotify-green/10 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {loading ? 'Logging in...' : 'Sign In'}
           </button>
-        </div>
+        </form>
 
         <div className="mt-10 pt-10 border-t border-white/10 text-center">
           <p className="text-spotify-light text-sm font-bold">

@@ -13,6 +13,11 @@ export default function AdminDashboard() {
   const [preview, setPreview] = useState(null);
   const [albumPreview, setAlbumPreview] = useState(null);
 
+  // File state for Cloudinary
+  const [imageFile, setImageFile] = useState(null);
+  const [audioFile, setAudioFile] = useState(null);
+  const [albumImageFile, setAlbumImageFile] = useState(null);
+
   // Song Editing State
   const [editingSong, setEditingSong] = useState(null);
 
@@ -20,11 +25,35 @@ export default function AdminDashboard() {
   const [editingUser, setEditingUser] = useState(null);
   const [newUser, setNewUser] = useState({ username: "", password: "", name: "", role: "USER" });
 
+  // Analytics State
+  const [analytics, setAnalytics] = useState({
+    totalPlays: 0,
+    avgSession: 0,
+    storageUsed: 0,
+    apiRequests: 0,
+    userGrowth: [0, 0, 0, 0, 0, 0, 0],
+    deviceDistribution: { mobile: 0, desktop: 0, tablet: 0 },
+    activeUsers: 0,
+    serverStatus: "CHECKING..."
+  });
+
   useEffect(() => {
     fetchSongs();
     fetchAlbums();
     fetchUsers();
+    fetchAnalytics();
   }, []);
+
+  const fetchAnalytics = async () => {
+    try {
+      const res = await api.get("/analytics");
+      if (res.data?.data) {
+        setAnalytics(res.data.data);
+      }
+    } catch (err) {
+      console.log("Analytics fetch error, using defaults");
+    }
+  };
 
   const fetchSongs = async () => {
     try {
@@ -60,38 +89,73 @@ export default function AdminDashboard() {
       reader.onloadend = () => {
         if (type === 'song') {
           setPreview(reader.result);
-          setSong({ ...song, image: reader.result });
+          setImageFile(file); // Store file for upload
         } else {
           setAlbumPreview(reader.result);
-          setAlbum({ ...album, image: reader.result });
+          setAlbumImageFile(file); // Store file for upload
         }
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleAudioChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setAudioFile(file);
+      // Optional: simulate a URL or just show the filename
+      setSong({ ...song, audioUrl: file.name });
+    }
+  };
+
   const addOrUpdateSong = async (e) => {
     e.preventDefault();
     if (!song.title || !song.artist) return alert("Title and Artist are required");
-
-    const finalAudioUrl = song.audioUrl;
+    if (!editingSong && !audioFile && !song.audioUrl) return alert("Audio file or URL is required for new songs");
 
     setLoading(true);
     try {
+      let finalImageUrl = song.image;
+      let finalAudioUrl = song.audioUrl;
+
+      // 1. Upload image if it's a new file
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        const imgRes = await api.post('/upload/image', formData);
+        finalImageUrl = imgRes.data.url;
+      }
+
+      // 2. Upload audio if it's a new file (overrides text input)
+      if (audioFile) {
+        const formData = new FormData();
+        formData.append('file', audioFile);
+        const audRes = await api.post('/upload/audio', formData);
+        finalAudioUrl = audRes.data.url;
+      }
+
+      const songData = {
+        ...song,
+        image: finalImageUrl,
+        audioUrl: finalAudioUrl
+      };
+
       if (editingSong) {
-        // Update existing song
-        await api.put(`/songs/${editingSong.id}`, { ...song, audioUrl: finalAudioUrl });
+        await api.put(`/songs/${editingSong.id}`, songData);
         alert("Song Updated Successfully! ✏️");
         setEditingSong(null);
       } else {
-        // Create new song
-        await api.post("/songs", { ...song, audioUrl: finalAudioUrl });
+        await api.post("/songs", songData);
         alert("Song Published Successfully! 🚀");
       }
+
       setSong({ title: "", artist: "", image: "", audioUrl: "", albumId: "" });
       setPreview(null);
+      setImageFile(null);
+      setAudioFile(null);
       fetchSongs();
     } catch (err) {
+      console.error("Upload/Save Error:", err);
       alert("Failed to save song. Error: " + (err.response?.data?.msg || err.message));
     } finally {
       setLoading(false);
@@ -108,6 +172,8 @@ export default function AdminDashboard() {
       albumId: songToEdit.albumId || ""
     });
     setPreview(songToEdit.image);
+    setImageFile(null);
+    setAudioFile(null);
     setMusicMode('song');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -118,32 +184,43 @@ export default function AdminDashboard() {
     setPreview(null);
   };
 
+  const deleteSong = async (id) => {
+    if (!confirm("Are you sure you want to delete this song?")) return;
+
+    try {
+      await api.delete(`/songs/${id}`);
+      alert("Song deleted successfully! 🗑️");
+      fetchSongs(); // Auto refresh
+    } catch (err) {
+      alert("Failed to delete song: " + (err.response?.data?.msg || err.message));
+    }
+  };
+
   const addAlbum = async (e) => {
     e.preventDefault();
     if (!album.title || !album.artist) return alert("Title and Artist are required");
 
     setLoading(true);
     try {
-      await api.post("/albums", album);
+      let finalImageUrl = album.image;
+
+      if (albumImageFile) {
+        const formData = new FormData();
+        formData.append('file', albumImageFile);
+        const imgRes = await api.post('/upload/image', formData);
+        finalImageUrl = imgRes.data.url;
+      }
+
+      await api.post("/albums", { ...album, image: finalImageUrl });
       alert("Album Created Successfully! 💿");
       setAlbum({ title: "", artist: "", desc: "", image: "", bgColor: "#121212" });
       setAlbumPreview(null);
+      setAlbumImageFile(null);
       fetchAlbums();
     } catch (err) {
       alert("Failed to create album. Error: " + (err.response?.data?.msg || err.message));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const deleteSong = async (id) => {
-    if (!confirm("Remove this track from the catalog?")) return;
-    try {
-      await api.delete(`/songs/${id}`);
-      fetchSongs();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete track");
     }
   };
 
@@ -202,9 +279,9 @@ export default function AdminDashboard() {
             <p className="text-[10px] text-spotify-light font-bold uppercase mb-1 tracking-widest">Active Users</p>
             <p className="text-2xl font-black">{users.length}</p>
           </div>
-          <div className="bg-spotify-green text-black px-6 py-4 rounded-xl text-center shadow-lg shadow-spotify-green/20">
+          <div className={`${analytics.serverStatus === 'ONLINE' ? 'bg-spotify-green' : 'bg-red-500'} text-black px-6 py-4 rounded-xl text-center shadow-lg`}>
             <p className="text-[10px] font-bold uppercase mb-1 tracking-widest">Server Status</p>
-            <p className="text-2xl font-black">ONLINE</p>
+            <p className="text-2xl font-black">{analytics.serverStatus}</p>
           </div>
         </div>
       </header>
@@ -295,12 +372,28 @@ export default function AdminDashboard() {
                         <option key={alb.id} value={alb.id} className="bg-spotify-gray text-white">{alb.title}</option>
                       ))}
                     </select>
-                    <input
-                      value={song.audioUrl}
-                      placeholder="Audio URL"
-                      className="spotify-input !mb-0 !bg-white/5 !border-white/10 focus:!border-spotify-green"
-                      onChange={e => setSong({ ...song, audioUrl: e.target.value })}
-                    />
+                    <div>
+                      <label className="text-[10px] font-black text-spotify-light mb-2 block uppercase tracking-widest">Audio URL / Track</label>
+                      <div className="flex gap-2">
+                        <input
+                          value={song.audioUrl}
+                          placeholder="Paste audio link here..."
+                          className="spotify-input !mb-0 !bg-white/5 !border-white/10 focus:!border-spotify-green flex-1"
+                          onChange={e => setSong({ ...song, audioUrl: e.target.value })}
+                        />
+                        <div className="relative group overflow-hidden">
+                          <button type="button" className="h-full px-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all font-bold text-xs uppercase">
+                            {audioFile ? "✓ File Selected" : "📁 Upload"}
+                          </button>
+                          <input
+                            type="file"
+                            accept="audio/*"
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            onChange={handleAudioChange}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <button

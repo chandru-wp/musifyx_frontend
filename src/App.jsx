@@ -11,6 +11,7 @@ import { AuthProvider, AuthContext } from "./context/AuthContext";
 import { useContext } from "react";
 import Layout from "./components/Layout";
 import { PlayerProvider } from "./context/PlayerContext";
+import { PlaylistProvider } from "./context/PlaylistContext";
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { role } = useContext(AuthContext);
@@ -74,9 +75,11 @@ export default function App() {
   return (
     <AuthProvider>
       <PlayerProvider>
-        <HashRouter>
-          <RoutesWrapper />
-        </HashRouter>
+        <PlaylistProvider>
+          <HashRouter>
+            <RoutesWrapper />
+          </HashRouter>
+        </PlaylistProvider>
       </PlayerProvider>
     </AuthProvider>
   );

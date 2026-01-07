@@ -2,10 +2,15 @@ import { useContext, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { PlayerContext } from "../context/PlayerContext";
+import { PlaylistContext } from "../context/PlaylistContext";
+import PlaylistDetail from "../context/PlaylistDetail";
 
 export default function Layout({ children }) {
     const { role, logout } = useContext(AuthContext);
-    const { currentSong, isPlaying, togglePlay, progress, duration, seek } = useContext(PlayerContext);
+    const { currentSong, isPlaying, togglePlay, progress, duration, seek, volume, changeVolume, downloadCurrentSong } = useContext(PlayerContext);
+    const { playlists, createPlaylist, deletePlaylist, showCreateModal, setShowCreateModal } = useContext(PlaylistContext);
+    const [newPlaylistName, setNewPlaylistName] = useState("");
+    const [selectedPlaylist, setSelectedPlaylist] = useState(null);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -50,59 +55,86 @@ export default function Layout({ children }) {
 
                 {/* Sidebar */}
                 <div className={`
-                    absolute top-0 bottom-0 left-0 z-50 w-64 bg-spotify-black p-2 flex flex-col gap-2 transition-transform duration-300 md:relative md:translate-x-0 md:bg-transparent md:p-0
+                    absolute top-0 bottom-0 left-0 z-50 w-80 bg-spotify-black p-2 flex flex-col gap-2 transition-transform duration-300 md:relative md:translate-x-0 md:bg-transparent md:p-0
                     ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
                 `}>
-                    <div className="bg-spotify-dark rounded-lg p-6 flex flex-col gap-4 h-full md:h-auto border border-white/5 md:border-none shadow-2xl md:shadow-none">
+                    {/* Combined Mobile Sidebar */}
+                    <div className="bg-spotify-dark rounded-lg p-4 flex flex-col h-full overflow-hidden border border-white/5 md:border-none shadow-2xl md:shadow-none">
                         {/* Mobile Close Button */}
-                        <button className="md:hidden self-end text-white mb-4" onClick={() => setShowSidebar(false)}>✕</button>
-                        <Link to="/" className={`sidebar-item ${isActive('/') ? 'text-white' : ''}`} onClick={() => setShowSidebar(false)}>
-                            <span className="text-xl">{isActive('/') ? '🏠' : '🏚️'}</span> Home
-                        </Link>
-                        <Link to="/search" className={`sidebar-item ${isActive('/search') ? 'text-white' : ''}`} onClick={() => setShowSidebar(false)}>
-                            <span className="text-xl">🔍</span> Search
-                        </Link>
+                        <button className="md:hidden self-end text-white mb-2 text-2xl" onClick={() => setShowSidebar(false)}>✕</button>
 
-                        {/* Library Section directly in the column for mobile simplicity, or keep original structure if possible. 
-                            The original structure had two divs (nav + library). Let's keep the structure but adapt styling.
-                        */}
-                        {/* ... collapsing the original structure into the logic above might be cleaner, but let's strictly wrap the existing content ... */}
-                    </div>
+                        {/* Navigation */}
+                        <div className="space-y-2 mb-4">
+                            <Link to="/" className={`sidebar-item ${isActive('/') ? 'text-white' : ''}`} onClick={() => setShowSidebar(false)}>
+                                <span className="text-xl">{isActive('/') ? '🏠' : '🏚️'}</span> Home
+                            </Link>
+                            <Link to="/search" className={`sidebar-item ${isActive('/search') ? 'text-white' : ''}`} onClick={() => setShowSidebar(false)}>
+                                <span className="text-xl">🔍</span> Search
+                            </Link>
+                        </div>
 
-                    {/* Re-implementing the second part of the sidebar to be scrollable and robust */}
-                    <div className="bg-spotify-dark rounded-lg p-6 flex-1 flex flex-col overflow-hidden border border-white/5 md:border-none">
-                        <div className="flex items-center justify-between mb-6 shrink-0">
+                        {/* Divider */}
+                        <div className="h-[1px] bg-white/10 my-2"></div>
+
+                        {/* Library Header */}
+                        <div className="flex items-center justify-between mb-4 shrink-0">
                             <div className="sidebar-item text-white">
                                 <span className="text-xl">📚</span> Your Library
                             </div>
-                            <button className="text-spotify-light hover:text-white text-2xl">+</button>
+                            <button
+                                onClick={() => setShowCreateModal(true)}
+                                className="text-spotify-light hover:text-white text-2xl hover:scale-110 transition-all"
+                                title="Create Playlist"
+                            >+</button>
                         </div>
 
+                        {/* Scrollable Library Content */}
                         <div className="flex-1 overflow-y-auto custom-scroll space-y-4 pr-1">
-                            {/* ... library items ... */}
-                            <div className="bg-spotify-gray/40 p-4 rounded-xl border border-white/5">
-                                <p className="font-bold text-sm mb-2">Create your first playlist</p>
-                                <p className="text-xs text-spotify-light mb-4">It's easy, we'll help you</p>
-                                <button className="bg-white text-black text-[10px] font-black py-2 px-4 rounded-full hover:scale-105 transition-all">Create playlist</button>
-                            </div>
-                            {/* ... */}
+                            {/* User's Playlists */}
+                            {playlists.length > 0 ? (
+                                playlists.map(playlist => (
+                                    <div
+                                        key={playlist.id}
+                                        className="bg-white/5 p-4 rounded-xl border border-white/5 hover:bg-white/10 transition-all cursor-pointer group"
+                                        onClick={() => setSelectedPlaylist(playlist)}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-500 rounded-lg flex items-center justify-center text-xl shadow-lg">🎵</div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-black text-sm truncate group-hover:text-spotify-green transition-colors">{playlist.name}</p>
+                                                <p className="text-[11px] font-bold text-spotify-light uppercase tracking-wider">{playlist.songs.length} songs</p>
+                                            </div>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); deletePlaylist(playlist.id); }}
+                                                className="opacity-0 group-hover:opacity-100 text-red-500 hover:scale-125 transition-all p-2"
+                                                title="Delete Playlist"
+                                            >🗑</button>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="bg-gradient-to-br from-white/10 to-transparent p-6 rounded-2xl border border-white/10 shadow-xl">
+                                    <p className="font-black text-base mb-2">Create your first playlist</p>
+                                    <p className="text-xs text-spotify-light font-medium mb-5 leading-relaxed">It's easy, we'll help you through the process.</p>
+                                    <button
+                                        onClick={() => setShowCreateModal(true)}
+                                        className="bg-white text-black text-xs font-black py-3 px-6 rounded-full hover:scale-105 active:scale-95 transition-all shadow-white/10 shadow-lg"
+                                    >Create playlist</button>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="mt-auto pt-6 border-t border-white/5 space-y-4">
-                            {role === 'ADMIN' && (
-                                <>
-                                    <Link to="/admin" onClick={() => setShowSidebar(false)} className={`sidebar-item hover:text-spotify-green transition-colors ${isActive('/admin') ? 'text-spotify-green' : ''}`}>
-                                        <span className="text-lg">⚙️</span> Manage Catalog
-                                    </Link>
-                                    <Link to="/admin/users" onClick={() => setShowSidebar(false)} className={`sidebar-item hover:text-spotify-green transition-colors ${isActive('/admin/users') ? 'text-spotify-green' : ''}`}>
-                                        <span className="text-lg">👥</span> Manage Users
-                                    </Link>
-                                </>
-                            )}
-                            {/* <button onClick={logout} className="w-full text-left text-[10px] text-spotify-light hover:text-red-500 font-black uppercase tracking-widest transition-colors py-2">
-                                Sign Out
-                            </button> */}
-                        </div>
+                        {/* Admin Links - Fixed at Bottom */}
+                        {role === 'ADMIN' && (
+                            <div className="mt-auto pt-4 border-t border-white/10 space-y-2">
+                                <Link to="/admin" onClick={() => setShowSidebar(false)} className={`sidebar-item hover:text-spotify-green transition-colors ${isActive('/admin') ? 'text-spotify-green' : ''}`}>
+                                    <span className="text-lg">⚙️</span> Manage Catalog
+                                </Link>
+                                <Link to="/admin/users" onClick={() => setShowSidebar(false)} className={`sidebar-item hover:text-spotify-green transition-colors ${isActive('/admin/users') ? 'text-spotify-green' : ''}`}>
+                                    <span className="text-lg">👥</span> Manage Users
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -114,13 +146,14 @@ export default function Layout({ children }) {
                             {/* Mobile Hamburger */}
                             <button
                                 onClick={() => setShowSidebar(true)}
-                                className="md:hidden bg-black/50 w-8 h-8 rounded-full flex items-center justify-center text-white mr-2 hover:bg-black"
+                                className="md:hidden bg-black/50 w-8 h-8 rounded-full flex items-center justify-center text-white hover:bg-black"
                             >
                                 ☰
                             </button>
 
-                            <button onClick={goBack} className="hidden md:flex bg-black/50 w-8 h-8 rounded-full items-center justify-center text-xl hover:bg-black transition-all">‹</button>
-                            <button onClick={goForward} className="hidden md:flex bg-black/50 w-8 h-8 rounded-full items-center justify-center text-xl hover:bg-black transition-all">›</button>
+                            {/* Navigation Buttons - Now visible on mobile */}
+                            <button onClick={goBack} className="bg-black/50 w-8 h-8 rounded-full flex items-center justify-center text-xl hover:bg-black transition-all">‹</button>
+                            <button onClick={goForward} className="bg-black/50 w-8 h-8 rounded-full flex items-center justify-center text-xl hover:bg-black transition-all">›</button>
                         </div>
                         <div className="flex items-center gap-4 relative">
                             <button className="bg-white text-black font-black py-2 px-6 rounded-full text-[10px] hover:scale-105 transition-all hidden md:block uppercase tracking-widest">Upgrade</button>
@@ -161,7 +194,7 @@ export default function Layout({ children }) {
                         </div>
                     </div>
 
-                    <div className="p-8">
+                    <div className="p-4 md:p-8">
                         {children}
                     </div>
                 </div>
@@ -203,7 +236,7 @@ export default function Layout({ children }) {
             </div>
 
             {/* Music Player Bar (Glassmorphism) */}
-            <div className="h-20 md:h-24 bg-black/80 backdrop-blur-3xl border-t border-white/5 flex items-center px-4 md:px-6 justify-between select-none relative z-50 shadow-2xl">
+            <div className="min-h-20 md:min-h-24 h-auto safe-bottom py-2 bg-black/80 backdrop-blur-3xl border-t border-white/5 flex items-center px-4 md:px-6 justify-between select-none relative z-50 shadow-2xl">
                 <div className="flex items-center gap-3 md:gap-5 w-full md:w-1/3 min-w-0">
                     <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-[#333] to-[#111] rounded-lg shadow-2xl overflow-hidden flex items-center justify-center border border-white/10 shrink-0 group relative cursor-pointer">
                         {currentSong?.image ?
@@ -259,18 +292,77 @@ export default function Layout({ children }) {
 
                 {/* Right Controls - Desktop */}
                 <div className="hidden md:flex items-center justify-end gap-5 w-1/3 min-w-fit">
-                    <button className="text-spotify-light hover:text-white transition-all hover:scale-110" title="Download Current Track">⬇</button>
+                    <button
+                        onClick={downloadCurrentSong}
+                        className="text-spotify-light hover:text-white transition-all hover:scale-110"
+                        title="Download Current Track"
+                    >⬇</button>
                     <button className="text-spotify-light hover:text-white transition-colors">mic</button>
                     <button className="text-spotify-light hover:text-white transition-colors">queue</button>
                     <div className="flex items-center gap-3 group w-32 ml-2">
-                        <span className="text-spotify-light group-hover:text-white text-sm transition-colors">🔊</span>
-                        <div className="flex-1 h-1 bg-white/10 rounded-full relative overflow-hidden cursor-pointer group shadow-inner">
+                        <button
+                            onClick={() => changeVolume(volume > 0 ? 0 : 0.7)}
+                            className="text-spotify-light group-hover:text-white text-sm transition-colors"
+                        >
+                            {volume === 0 ? '🔇' : volume < 0.3 ? '🔈' : volume < 0.7 ? '🔉' : '🔊'}
+                        </button>
+                        <div
+                            className="flex-1 h-1.5 bg-white/10 rounded-full relative overflow-hidden cursor-pointer group shadow-inner"
+                            onClick={(e) => {
+                                const rect = e.target.getBoundingClientRect();
+                                const clickX = e.clientX - rect.left;
+                                const newVolume = Math.max(0, Math.min(1, clickX / rect.width));
+                                changeVolume(newVolume);
+                            }}
+                        >
                             <div className="absolute inset-0 h-full bg-spotify-green/10"></div>
-                            <div className="w-2/3 h-full bg-white group-hover:bg-spotify-green transition-colors"></div>
+                            <div
+                                className="h-full bg-white group-hover:bg-spotify-green transition-colors"
+                                style={{ width: `${volume * 100}%` }}
+                            ></div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Create Playlist Modal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-spotify-dark rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <h2 className="text-2xl font-black mb-6">Create Playlist</h2>
+                        <input
+                            type="text"
+                            placeholder="My Playlist"
+                            value={newPlaylistName}
+                            onChange={(e) => setNewPlaylistName(e.target.value)}
+                            className="w-full bg-spotify-gray/50 border border-white/10 rounded-xl p-4 text-white placeholder-spotify-light focus:outline-none focus:ring-2 focus:ring-spotify-green mb-6"
+                            autoFocus
+                        />
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => { setShowCreateModal(false); setNewPlaylistName(""); }}
+                                className="flex-1 py-3 rounded-full bg-white/10 hover:bg-white/20 font-bold transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => { createPlaylist(newPlaylistName || "My Playlist"); setNewPlaylistName(""); }}
+                                className="flex-1 py-3 rounded-full bg-spotify-green text-black font-bold hover:scale-105 transition-all"
+                            >
+                                Create
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Playlist Detail Modal */}
+            {selectedPlaylist && (
+                <PlaylistDetail
+                    playlist={selectedPlaylist}
+                    onClose={() => setSelectedPlaylist(null)}
+                />
+            )}
         </div>
     );
 }

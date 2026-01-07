@@ -59,7 +59,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/musifyx-backend\.onrender\.com\/api\/.*/i,
+            urlPattern: /^(https:\/\/musifyx-backend\.onrender\.com|http:\/\/localhost:5000)\/api\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',

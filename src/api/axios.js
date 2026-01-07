@@ -1,7 +1,16 @@
 import axios from "axios";
 
+// If multiple VITE_API_URL are defined in .env, Vite usually takes the last one.
+// This logic ensures we pick the right one for the right environment.
+// const baseURL = "https://musifyx-backend.onrender.com/api";
+const baseURL = import.meta.env.VITE_API_URL || (import.meta.env.DEV
+  ? "http://localhost:5000/api"
+  : "https://musifyx-backend.onrender.com/api");
+
+console.log(`🚀 API Base URL: ${baseURL}`);
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  baseURL,
 });
 
 api.interceptors.request.use((config) => {

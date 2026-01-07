@@ -8,6 +8,7 @@ export const PlayerProvider = ({ children }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const [duration, setDuration] = useState(0);
+    const [volume, setVolume] = useState(0.7);
     const audioRef = useRef(new Audio());
 
     useEffect(() => {
@@ -37,7 +38,7 @@ export const PlayerProvider = ({ children }) => {
 
         const audio = audioRef.current;
         audio.src = song.audioUrl;
-        audio.volume = 0.5; // Default volume
+        audio.volume = volume;
         console.log("Playing:", song.audioUrl);
 
         audio.play()
@@ -71,8 +72,41 @@ export const PlayerProvider = ({ children }) => {
         setProgress(time);
     };
 
+    const changeVolume = (newVolume) => {
+        const audio = audioRef.current;
+        audio.volume = newVolume;
+        setVolume(newVolume);
+    };
+
+    const downloadCurrentSong = () => {
+        if (!currentSong?.audioUrl) {
+            alert("No song is currently playing");
+            return;
+        }
+
+        // Create a temporary link to download
+        const link = document.createElement("a");
+        link.href = currentSong.audioUrl;
+        link.download = `${currentSong.title} - ${currentSong.artist}.mp3`;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
-        <PlayerContext.Provider value={{ currentSong, isPlaying, progress, duration, playSong, togglePlay, seek }}>
+        <PlayerContext.Provider value={{
+            currentSong,
+            isPlaying,
+            progress,
+            duration,
+            volume,
+            playSong,
+            togglePlay,
+            seek,
+            changeVolume,
+            downloadCurrentSong
+        }}>
             {children}
         </PlayerContext.Provider>
     );
